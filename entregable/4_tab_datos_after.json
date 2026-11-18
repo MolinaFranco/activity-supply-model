@@ -1,0 +1,86 @@
+{
+  "data": [
+    {
+      "record_locator": "sd-siembra-001",
+      "table_name": "structured_data",
+      "detail": "PLANTATION",
+      "record_date": "2026-03-10",
+      "summary": "Siembra — Lote Norte — Maíz DK7210",
+      "structure": {
+        "name": "Siembra",
+        "lote_names": ["Lote Norte"],
+        "keys": { "Cultivo": "Maíz", "Genética": "DK7210", "Fertilizante": "Fosfato diamónico" }
+      },
+      "supply_output": {
+        "record_locator": "sd-supply-775",
+        "record_date": "2026-03-10",
+        "summary": "Uso de insumos — DK7210 20 bolsas, Fosfato diamónico 1000 kg",
+        "supplies": [
+          { "supply_id": "sup-dk7210",  "name": "DK7210",            "quantity": 20,   "unit": "bolsas", "item_name": "DK7210" },
+          { "supply_id": "sup-fosfato", "name": "Fosfato diamónico", "quantity": 1000, "unit": "kg",     "item_name": "Fosfato diamónico" }
+        ]
+      }
+    },
+    {
+      "record_locator": "sd-fert-002",
+      "table_name": "structured_data",
+      "detail": "FERTILIZATION",
+      "record_date": "2026-03-12",
+      "summary": "Fertilización — Lote Sur — Urea 10 kg/ha",
+      "structure": {
+        "name": "Fertilización",
+        "lote_names": ["Lote Sur"],
+        "keys": { "Cultivo": "Trigo", "Fertilizante": "Urea", "Dosis": "10 kg/ha" }
+      },
+      "supply_output": {
+        "record_locator": "sd-supply-777",
+        "record_date": "2026-03-12",
+        "summary": "Uso de insumos — Urea 100 kg",
+        "supplies": [
+          { "supply_id": "sup-urea", "name": "Urea", "quantity": 100, "unit": "kg", "item_name": "Urea" }
+        ]
+      }
+    },
+    {
+      "record_locator": "sd-pulv-003",
+      "table_name": "structured_data",
+      "detail": "PULVERIZATION",
+      "record_date": "2026-03-14",
+      "summary": "Pulverización — Lote Sur — Glifosato 2 L/ha",
+      "structure": {
+        "name": "Pulverización",
+        "lote_names": ["Lote Sur"],
+        "keys": { "Producto": "Glifosato", "Dosis": "2 L/ha" }
+      },
+      "supply_output": {
+        "record_locator": "sd-supply-776",
+        "record_date": "2026-03-14",
+        "summary": "Uso de insumos — Glifosato 20 L",
+        "supplies": [
+          { "supply_id": "sup-glifo", "name": "Glifosato", "quantity": 20, "unit": "L", "item_name": "Glifosato" }
+        ]
+      }
+    },
+    {
+      "record_locator": "sd-trat-004",
+      "table_name": "structured_data",
+      "detail": "TREATMENT",
+      "record_date": "2026-03-15",
+      "summary": "Tratamiento — Vaquillonas — Ivermectina",
+      "structure": {
+        "name": "Tratamiento",
+        "keys": { "Tratamiento": "Antiparasitario", "Producto": "Ivermectina", "Categoría": "Vaquillonas" }
+      },
+      "supply_output": {
+        "record_locator": "sd-supply-778",
+        "record_date": "2026-03-15",
+        "summary": "Uso de insumos — Ivermectina 500 ml",
+        "supplies": [
+          { "supply_id": "sup-iver", "name": "Ivermectina", "quantity": 500, "unit": "ml", "item_name": "Ivermectina" }
+        ]
+      }
+    }
+  ],
+  "total": 4,
+  "new_records": 0
+}

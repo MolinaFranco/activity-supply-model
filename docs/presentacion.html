@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="margin:0">
+<title>Modelo Actividad–Insumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una columna angosta, un bloque por idea, mucho aire. Solo tema claro. Cada bloque lleva check y nota. */
+:root{
+  --bg:#ffffff; --fg:#17201b; --muted:#66736b; --line:#e2e7e1; --soft:#f4f7f3;
+  --accent:#2f6b47; --accent-soft:#e3f0e7; --amber:#9a5d0e; --amber-soft:#fbf1df;
+  --f-display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 80px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:780px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.2;text-wrap:balance}
+h1{font-size:2.2rem;font-weight:700}
+h2{font-size:1.5rem;font-weight:600}
+h3{font-size:1.2rem;font-weight:600}
+p{margin:0;max-width:64ch}
+ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+code{font-family:var(--f-mono);font-size:.88em;background:var(--soft);padding:1px 5px;border-radius:4px}
+pre{margin:0;font-family:var(--f-mono);font-size:13px;line-height:1.6;background:var(--soft);border-radius:8px;padding:14px 16px;overflow-x:auto}
+.k{color:var(--accent);font-weight:500} .c{color:var(--muted)}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:10px}
+.bar .st{font-size:13px;color:var(--muted);flex:1;min-width:160px}
+.bar button{font:inherit;font-size:13px;font-weight:500;padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.bar button:hover,.bar button:focus-visible{border-color:var(--accent);outline:none}
+
+header{padding-block:44px 8px;display:flex;flex-direction:column;gap:10px}
+header p{color:var(--muted);font-size:1.05rem}
+
+.sec{margin-top:64px;display:flex;flex-direction:column;gap:8px}
+.sec>.tag{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.sec>p{color:var(--muted);font-size:14.5px}
+.sec.extras{border-top:2px dashed var(--amber);padding-top:28px}
+.sec.extras>.tag{color:var(--amber)}
+
+.block{margin-top:28px;display:flex;flex-direction:column;gap:14px}
+.block .head{display:flex;align-items:baseline;gap:12px}
+.block .head h3{flex:1;min-width:0}
+.ctl{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);white-space:nowrap;cursor:pointer}
+.ctl input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.body{display:flex;flex-direction:column;gap:14px}
+.block.off .body{display:none}
+.block.off .head h3{text-decoration:line-through;color:var(--muted);font-weight:500}
+.notes{width:100%;min-height:42px;resize:vertical;font:inherit;font-size:13.5px;padding:8px 10px;border:1px dashed var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.notes:focus-visible{outline:none;border-color:var(--accent);border-style:solid}
+.notes::placeholder{color:var(--muted)}
+body.present .ctl,body.present .notes,body.present .block.off,body.present .bar .st,body.present .sec.tools{display:none}
+
+.diagram{overflow-x:auto}
+.diagram svg{display:block;max-width:100%;height:auto}
+.cases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.cases>div{border-radius:10px;padding:12px 14px;font-size:14px;background:var(--soft);min-width:0}
+.cases>div.yes{background:var(--accent-soft)}
+.cases b{display:block;font-family:var(--f-mono);font-weight:500;font-size:12.5px;margin-bottom:4px}
+
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:8px 12px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-display);font-weight:600;font-size:13px;color:var(--muted)}
+td:first-child{font-family:var(--f-mono);font-size:13px;white-space:nowrap}
+td.t{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);white-space:nowrap}
+table.plain td:first-child{font-family:var(--f-body);font-size:14.5px;white-space:normal;font-weight:500}
+table.rows td{font-family:var(--f-mono);font-size:12.5px;white-space:nowrap}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.two>*{min-width:0}
+.cap{font-size:12px;font-family:var(--f-mono);color:var(--muted);margin-bottom:4px}
+
+.feed{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.row{border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
+.row.loose{border-style:dashed;color:var(--muted)}
+.child{margin-left:12px;padding:5px 9px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0;font-size:13px}
+
+@media (max-width:640px){ h1{font-size:1.7rem} .two,.cases{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+
+<header>
+  <h1>Modelo de relación Actividad–Insumo</h1>
+  <p>Challenge 2 · Backend / Modelado de datos</p>
+</header>
+
+<!-- IDEA -->
+<section class="sec">
+  <span class="tag">La idea</span>
+
+  <article class="block" data-block="glosario">
+    <div class="head"><h3>Las palabras que uso</h3></div>
+    <div class="body">
+      <div class="tbl"><table class="plain">
+        <tbody>
+          <tr><td>Actividad</td><td>Un registro de Siembra, Fertilización, Pulverización o Tratamiento.</td></tr>
+          <tr><td>Item</td><td>Un renglón de una actividad: el nombre del producto y su dosis.</td></tr>
+          <tr><td>SPO</td><td>Un registro SUPPLYOUTPUT: un uso de insumo. Es el quinto tipo del enunciado.</td></tr>
+          <tr><td>Record</td><td>Un renglón de un SPO: el id de un insumo y una cantidad.</td></tr>
+          <tr><td>Insumo</td><td>Un producto del inventario. Tiene id, nombre y unidad.</td></tr>
+        </tbody>
+      </table></div>
+      <p>El SPO es una actividad que puede cargarse sola, o como parte de otra que la necesita para realizarse.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="idea">
+    <div class="head"><h3>Actividad → SPO → insumo</h3></div>
+    <div class="body">
+      <div class="diagram">
+        <svg viewBox="0 0 720 215" role="img" aria-label="El SPO apunta a su actividad con parent_id. Cada record del SPO apunta a un item de la actividad con item_id, y al insumo del inventario con supply_id.">
+          <defs>
+            <marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2f6b47"/></marker>
+            <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9a5d0e"/></marker>
+            <marker id="mm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#66736b"/></marker>
+          </defs>
+          <rect x="10" y="30" width="210" height="150" rx="10" fill="#ffffff" stroke="#e2e7e1"/>
+          <text x="26" y="62" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="16" fill="#17201b">Actividad</text>
+          <rect x="26" y="100" width="178" height="60" rx="8" fill="#f4f7f3" stroke="#e2e7e1"/>
+          <text x="38" y="124" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="14" fill="#17201b">item</text>
+          <text x="38" y="145" font-family="JetBrains Mono, monospace" font-size="12" fill="#66736b">"Urea3" · 10 kg/ha</text>
+
+          <rect x="255" y="30" width="210" height="150" rx="10" fill="#ffffff" stroke="#2f6b47" stroke-width="2"/>
+          <text x="271" y="62" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="16" fill="#17201b">SPO</text>
+          <rect x="271" y="100" width="178" height="60" rx="8" fill="#f4f7f3" stroke="#e2e7e1"/>
+          <text x="283" y="124" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="14" fill="#17201b">record</text>
+          <text x="283" y="145" font-family="JetBrains Mono, monospace" font-size="12" fill="#66736b">100 kg</text>
+
+          <rect x="500" y="100" width="210" height="60" rx="8" fill="#f4f7f3" stroke="#e2e7e1"/>
+          <text x="512" y="124" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="14" fill="#17201b">insumo</text>
+          <text x="512" y="145" font-family="JetBrains Mono, monospace" font-size="12" fill="#66736b">inventario: "Urea"</text>
+
+          <path d="M255,56 L223,56" fill="none" stroke="#9a5d0e" stroke-width="2" marker-end="url(#ma)"/>
+          <text x="238" y="20" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#9a5d0e">parent_id · nuevo</text>
+          <path d="M271,130 L207,130" fill="none" stroke="#2f6b47" stroke-width="2" marker-end="url(#mg)"/>
+          <text x="238" y="202" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#2f6b47">item_id · nuevo</text>
+          <path d="M449,130 L497,130" fill="none" stroke="#66736b" stroke-width="2" marker-end="url(#mm)"/>
+          <text x="474" y="202" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#66736b">supply_id · ya existe</text>
+        </svg>
+      </div>
+      <p>El item dice lo que se aplicó: nombre y dosis. El record dice lo que se consumió: insumo y cantidad. Hoy no hay nada que los una. Agrego las dos referencias que faltan.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="regla">
+    <div class="head"><h3>Cuándo hay link</h3></div>
+    <div class="body">
+      <div class="cases">
+        <div class="yes"><b>carga normal, por el form</b>El usuario elige un insumo. Se crean el item y su record, y el record guarda el id del item.</div>
+        <div class="yes"><b>un SPO que ya existía</b>Regla del enunciado: hay link solo si el nombre del item es el mismo que el del insumo.</div>
+        <div><b>producto en texto libre</b>No hay record. No hay link.</div>
+      </div>
+      <p>El enunciado pide link únicamente cuando el nombre coincide. Cambié esa regla porque no me parecía útil en un sistema grande: para que escale hace falta trabajar con ids. Además, así queda la libertad de poner otros nombres en los items.</p>
+      <p>Un item sin SPO no tiene link, aunque su nombre coincida con un insumo: sin SPO no hay consumo registrado.</p>
+    </div>
+  </article>
+</section>
+
+<!-- 1 MODELO -->
+<section class="sec">
+  <span class="tag">Entregable 1</span>
+  <h2>Modelo de datos</h2>
+
+  <article class="block" data-block="tres-datos">
+    <div class="head"><h3>Tres datos nuevos</h3></div>
+    <div class="body">
+      <div class="tbl"><table>
+        <thead><tr><th>Dónde</th><th>Campo</th><th>Qué guarda</th></tr></thead>
+        <tbody>
+          <tr><td>Cada item</td><td class="t">id</td><td>Un identificador propio. Antes un item era solo una posición en una lista</td></tr>
+          <tr><td>El SPO</td><td class="t">parent_id</td><td>La actividad a la que pertenece. Vacío = SPO suelto</td></tr>
+          <tr><td>Cada record</td><td class="t">item_id</td><td>El item de la actividad al que corresponde</td></tr>
+        </tbody>
+      </table></div>
+      <p>El id del item se genera automáticamente. Los otros dos son opcionales: lo ya cargado sigue siendo válido. <code>parent_id</code> es una columna de structured data, con clave foránea e índice.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="tabla">
+    <div class="head"><h3>Una tabla: <code>supply_output_record</code></h3></div>
+    <div class="body">
+      <p>Una fila por cada record de un SPO. Es una copia de lo que el record dice en el JSON, en columnas. Se reescribe cada vez que se guarda el SPO.</p>
+      <p>La copia existe porque respeto los tipos del enunciado, que guardan los records dentro del JSON. No es lo que haría con libertad total: está en las mejoras.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Qué guarda</th></tr></thead>
+        <tbody>
+          <tr><td>supply_output_id</td><td class="t">uuid · FK</td><td>El SPO dueño del record</td></tr>
+          <tr><td>record_index</td><td class="t">int</td><td>Posición del record en el SPO</td></tr>
+          <tr><td>supply_id</td><td class="t">FK</td><td>El insumo del inventario</td></tr>
+          <tr><td>quantity, unit</td><td class="t">numeric, int</td><td>Cuánto se usó y en qué unidad</td></tr>
+          <tr><td>item_id</td><td class="t">uuid</td><td>El item de la actividad al que corresponde</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </article>
+
+  <article class="block" data-block="indices">
+    <div class="head"><h3>Relaciones, claves e índices</h3></div>
+    <div class="body">
+      <div class="tbl"><table class="plain">
+        <tbody>
+          <tr><td>Actividad — SPO</td><td>Uno a uno. El SPO apunta a su actividad.</td></tr>
+          <tr><td>Item — record</td><td>Uno a uno. El record apunta a su item.</td></tr>
+          <tr><td>Actividad — insumo</td><td>Muchos a muchos, a través de los records del SPO.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tbl"><table>
+        <thead><tr><th>Clave o índice</th><th>Para qué</th></tr></thead>
+        <tbody>
+          <tr><td>clave: supply_output_id + record_index</td><td>Una fila por record</td></tr>
+          <tr><td>único: parent_id</td><td>¿Qué SPO tiene esta actividad? Y garantiza que sea uno solo</td></tr>
+          <tr><td>supply_id</td><td>¿En qué usos y actividades aparece este insumo?</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </article>
+
+  <article class="block" data-block="consultable">
+    <div class="head"><h3>Por qué se consulta sin recorrer el JSON</h3></div>
+    <div class="body">
+      <ul>
+        <li>La actividad de un SPO es una columna con índice.</li>
+        <li>Insumo, cantidad y unidad de cada record también son columnas.</li>
+        <li>«Qué insumos consumió esta actividad y cuánto» es buscar su SPO y leer sus filas. Es también la base para imputar el costo.</li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<!-- 2 CRUD -->
+<section class="sec">
+  <span class="tag">Entregable 2</span>
+  <h2>Criterio de CRUD</h2>
+  <p>Los links son datos, no cálculos. Por eso editar no recalcula nada.</p>
+
+  <article class="block" data-block="crear">
+    <div class="head"><h3>Crear</h3></div>
+    <div class="body">
+<pre><span class="k">crear_actividad</span>(actividad, insumos):
+    <span class="c">insumos: por cada item, el insumo elegido y la cantidad</span>
+
+    en una transacción:
+        guardar la actividad
+        si hay insumos:
+            <span class="k">guardar_spo</span>(un record por insumo, actividad)
+
+<span class="k">guardar_spo</span>(spo, actividad = ninguna):
+    guardar el SPO con su actividad
+    reescribir sus filas en la tabla</pre>
+      <p><code>guardar_spo</code> es el único camino para escribir un SPO, sea de una actividad o suelto.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="actualizar">
+    <div class="head"><h3>Actualizar</h3></div>
+    <div class="body">
+<pre><span class="k">actualizar_actividad</span>(id, actividad, insumos = sin cambios):
+    en una transacción:
+        guardar la actividad
+        si llegaron insumos:
+            reemplazan a los records de su SPO
+        si no:
+            quitar del SPO los records de items que ya no existen
+
+<span class="k">actualizar_spo</span>(id, spo):
+    en una transacción:
+        <span class="k">guardar_spo</span>(spo, la misma actividad que tenía)</pre>
+      <p>La actividad es la fuente de verdad sobre sus items. El SPO lo es sobre lo consumido. No hay información repetida entre los dos: se puede corregir una cantidad sin tocar la actividad.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="asociar">
+    <div class="head"><h3>Asociar un SPO que ya existía</h3></div>
+    <div class="body">
+<pre><span class="k">asociar_spo</span>(spo, actividad):
+    por cada record del SPO:
+        buscar un item con el mismo nombre que su insumo
+        si existe → el record apunta a ese item
+        si no     → el record queda sin item
+    si ningún nombre coincide → no se asocia
+    <span class="k">guardar_spo</span>(spo, actividad)</pre>
+      <p>Es el único lugar donde se usa la regla por nombre del enunciado.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="borrar">
+    <div class="head"><h3>Borrar</h3></div>
+    <div class="body">
+<pre><span class="k">borrar_actividad</span>(id):
+    en una transacción:
+        marcar como eliminada la actividad
+        marcar como eliminado su SPO y quitar sus filas de la tabla</pre>
+      <p><strong>Agregado mío: baja lógica.</strong> El enunciado no la pide. Se marca la fecha de baja en el registro, sea actividad o SPO, y no se borra. La tabla de records solo tiene lo vivo. No hay una operación para deshacer: recuperar algo es un trabajo manual.</p>
+    </div>
+  </article>
+</section>
+
+<!-- 3 PAYLOADS -->
+<section class="sec">
+  <span class="tag">Entregable 3</span>
+  <h2>Payloads de ejemplo</h2>
+  <p>Parten del «antes» del enunciado, que es una muestra incompleta: la siembra y la pulverización suman el SPO que les faltaba, con cantidades ilustrativas. Los ids están abreviados (en la base son UUID) y <code>…</code> marca campos omitidos.</p>
+
+  <article class="block" data-block="p-siembra">
+    <div class="head"><h3>Siembra · Plantation</h3></div>
+    <div class="body">
+      <div class="two">
+        <div><div class="cap">actividad</div>
+<pre>{ "id": "sd-siembra-001",
+  …
+  "details": {
+    "genetic_variety": "DK7210",
+    <span class="k">"genetic_variety_id": "it-dk7210"</span> },
+  "fertilizers": [
+    { <span class="k">"id": "it-fosfato"</span>,
+      "source": "Fosfato diamónico" } ] }</pre></div>
+        <div><div class="cap">su SPO</div>
+<pre>{ "id": "sd-supply-775",
+  <span class="k">"parent_id": "sd-siembra-001"</span>,
+  …
+  "records": [
+    { "supply_id": "sup-dk7210",
+      "quantity": 20, "unit": 7,
+      <span class="k">"item_id": "it-dk7210"</span> },
+    { "supply_id": "sup-fosfato",
+      "quantity": 1000, "unit": 2,
+      <span class="k">"item_id": "it-fosfato"</span> } ] }</pre></div>
+      </div>
+      <p>Un solo SPO con dos records, uno por cada item. La genética es un campo único, por eso lleva su propio id.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="p-fert">
+    <div class="head"><h3>Fertilización · Fertilization</h3></div>
+    <div class="body">
+      <div class="two">
+        <div><div class="cap">actividad</div>
+<pre>{ "id": "sd-fert-002",
+  …
+  "fertilizers": [
+    { <span class="k">"id": "it-urea"</span>,
+      "source": "Urea",
+      "dosage": 10,
+      "dosage_units": "kg/ha" } ] }</pre></div>
+        <div><div class="cap">su SPO</div>
+<pre>{ "id": "sd-supply-777",
+  <span class="k">"parent_id": "sd-fert-002"</span>,
+  …
+  "records": [
+    { "supply_id": "sup-urea",
+      "quantity": 100, "unit": 2,
+      <span class="k">"item_id": "it-urea"</span> } ] }</pre></div>
+      </div>
+    </div>
+  </article>
+
+  <article class="block" data-block="p-pulv">
+    <div class="head"><h3>Pulverización · Pulverization</h3></div>
+    <div class="body">
+      <div class="two">
+        <div><div class="cap">actividad</div>
+<pre>{ "id": "sd-pulv-003",
+  …
+  "treatments": [
+    { <span class="k">"id": "it-glifo"</span>,
+      "source": "Glifosato",
+      "dosage": 2,
+      "dosage_units": "L/ha" } ] }</pre></div>
+        <div><div class="cap">su SPO</div>
+<pre>{ "id": "sd-supply-776",
+  <span class="k">"parent_id": "sd-pulv-003"</span>,
+  …
+  "records": [
+    { "supply_id": "sup-glifo",
+      "quantity": 20, "unit": 1,
+      <span class="k">"item_id": "it-glifo"</span> } ] }</pre></div>
+      </div>
+    </div>
+  </article>
+
+  <article class="block" data-block="p-trat">
+    <div class="head"><h3>Tratamiento · TREATMENT</h3></div>
+    <div class="body">
+      <div class="two">
+        <div><div class="cap">actividad</div>
+<pre>{ "id": "sd-trat-004",
+  …
+  "treatment": "Antiparasitario",
+  "products": [
+    { <span class="k">"id": "it-iver"</span>,
+      "name": "Ivermectina" } ] }</pre></div>
+        <div><div class="cap">su SPO</div>
+<pre>{ "id": "sd-supply-778",
+  <span class="k">"parent_id": "sd-trat-004"</span>,
+  …
+  "records": [
+    { "supply_id": "sup-iver",
+      "quantity": 500, "unit": 5,
+      <span class="k">"item_id": "it-iver"</span> } ] }</pre></div>
+      </div>
+    </div>
+  </article>
+
+  <article class="block" data-block="p-uso">
+    <div class="head"><h3>Uso de insumo · SUPPLYOUTPUT</h3></div>
+    <div class="body">
+      <p>Los cuatro SPO de arriba pertenecen a una actividad. Sus filas en la tabla:</p>
+      <div class="tbl"><table class="rows">
+        <thead><tr><th>supply_output_id</th><th>record_index</th><th>supply_id</th><th>quantity</th><th>unit</th><th>item_id</th></tr></thead>
+        <tbody>
+          <tr><td>sd-supply-775</td><td>0</td><td>sup-dk7210</td><td>20</td><td>7</td><td>it-dk7210</td></tr>
+          <tr><td>sd-supply-775</td><td>1</td><td>sup-fosfato</td><td>1000</td><td>2</td><td>it-fosfato</td></tr>
+          <tr><td>sd-supply-776</td><td>0</td><td>sup-glifo</td><td>20</td><td>1</td><td>it-glifo</td></tr>
+          <tr><td>sd-supply-777</td><td>0</td><td>sup-urea</td><td>100</td><td>2</td><td>it-urea</td></tr>
+          <tr><td>sd-supply-778</td><td>0</td><td>sup-iver</td><td>500</td><td>5</td><td>it-iver</td></tr>
+        </tbody>
+      </table></div>
+      <p>Un SPO también se puede cargar suelto: es el mismo JSON, con <code>parent_id</code> vacío y sin <code>item_id</code> en sus records. Los valores de <code>unit</code> son ilustrativos: el enunciado solo dice que es un entero que viene del insumo.</p>
+    </div>
+  </article>
+</section>
+
+<!-- 4 BFF -->
+<section class="sec">
+  <span class="tag">Entregable 4</span>
+  <h2>Tab «Datos»</h2>
+
+  <article class="block" data-block="feed-visual">
+    <div class="head"><h3>Antes y después</h3></div>
+    <div class="body">
+      <div class="two">
+        <div class="feed">
+          <div class="cap">antes · 6 filas sueltas</div>
+          <div class="row">Siembra — Lote Norte — Maíz DK7210</div>
+          <div class="row">Fertilización — Lote Sur — Urea 10 kg/ha</div>
+          <div class="row">Pulverización — Lote Sur — Glifosato 2 L/ha</div>
+          <div class="row">Tratamiento — Vaquillonas — Ivermectina</div>
+          <div class="row loose">Uso de insumos — Urea 100 kg</div>
+          <div class="row loose">Uso de insumos — Ivermectina 500 ml</div>
+        </div>
+        <div class="feed">
+          <div class="cap">después · 4 filas</div>
+          <div class="row">Siembra — Lote Norte — Maíz DK7210
+            <div class="child">Uso de insumos — DK7210 20 bolsas, Fosfato diamónico 1000 kg</div></div>
+          <div class="row">Fertilización — Lote Sur — Urea 10 kg/ha
+            <div class="child">Uso de insumos — Urea 100 kg</div></div>
+          <div class="row">Pulverización — Lote Sur — Glifosato 2 L/ha
+            <div class="child">Uso de insumos — Glifosato 20 L</div></div>
+          <div class="row">Tratamiento — Vaquillonas — Ivermectina
+            <div class="child">Uso de insumos — Ivermectina 500 ml</div></div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="block" data-block="feed-json">
+    <div class="head"><h3>Respuesta nueva</h3></div>
+    <div class="body">
+<pre>{
+  "data": [
+    { "record_locator": "sd-siembra-001", <span class="c">… igual que antes …</span>
+      <span class="k">"supply_output"</span>: {
+        "record_locator": "sd-supply-775",
+        "record_date": "2026-03-10",
+        "summary": "Uso de insumos — DK7210 20 bolsas, Fosfato diamónico 1000 kg",
+        "supplies": [
+          { "supply_id": "sup-dk7210", "name": "DK7210",
+            "quantity": 20, "unit": "bolsas", "item_name": "DK7210" },
+          { "supply_id": "sup-fosfato", "name": "Fosfato diamónico",
+            "quantity": 1000, "unit": "kg", "item_name": "Fosfato diamónico" }
+        ] } },
+
+    { "record_locator": "sd-fert-002", <span class="c">… igual que antes …</span>
+      <span class="k">"supply_output"</span>: {
+        "record_locator": "sd-supply-777",
+        "record_date": "2026-03-12",
+        "summary": "Uso de insumos — Urea 100 kg",
+        "supplies": [
+          { "supply_id": "sup-urea", "name": "Urea",
+            "quantity": 100, "unit": "kg", "item_name": "Urea" }
+        ] } },
+
+    { "record_locator": "sd-pulv-003", <span class="c">… igual que antes …</span>
+      <span class="k">"supply_output"</span>: { <span class="c">… sd-supply-776: Glifosato 20 L …</span> } },
+
+    { "record_locator": "sd-trat-004", <span class="c">… igual que antes …</span>
+      <span class="k">"supply_output"</span>: { <span class="c">… sd-supply-778: Ivermectina 500 ml …</span> } }
+  ],
+  "total": 4,
+  "new_records": 0
+}</pre>
+    </div>
+  </article>
+
+  <article class="block" data-block="feed-just">
+    <div class="head"><h3>Justificación</h3></div>
+    <div class="body">
+      <ul>
+        <li>Cada actividad conserva todos sus campos y suma <code>supply_output</code>: su uso de insumos, con cada insumo ya resuelto.</li>
+        <li>Un SPO que pertenece a una actividad deja de ser fila propia, para no mostrarlo dos veces. La página lista lo que no tiene <code>parent_id</code>, y <code>total</code> cuenta lo mismo: pasa de 6 a 4.</li>
+        <li>Los insumos de toda la página salen de una sola consulta.</li>
+        <li>Un SPO suelto sigue como fila propia, igual que hoy. En este ejemplo no queda ninguno.</li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<!-- 5 README -->
+<section class="sec">
+  <span class="tag">Entregable 5</span>
+  <h2>Decisiones y trade-offs</h2>
+
+  <article class="block" data-block="decisiones">
+    <div class="head"><h3>Decisiones</h3></div>
+    <div class="body">
+      <div class="tbl"><table class="plain">
+        <thead><tr><th>Decisión</th><th>Qué gano</th><th>Qué cuesta</th></tr></thead>
+        <tbody>
+          <tr><td>El SPO guarda su actividad</td><td>Una sola referencia, en un solo lugar. El feed filtra directo</td><td>Una columna nueva en structured data</td></tr>
+          <tr><td>Cada item tiene un id</td><td>El link no se rompe si se reordena o se borra un item</td><td>Un campo nuevo en cada item</td></tr>
+          <tr><td>El record guarda su item</td><td>El link es un dato: editar no recalcula nada</td><td>Un campo nuevo en el record</td></tr>
+          <tr><td>Copiar los records a una tabla</td><td>Consultas por actividad y por insumo, sin abrir el JSON</td><td>El record queda en dos lugares. Es el precio de respetar los tipos del enunciado</td></tr>
+          <tr><td>Un solo SPO por actividad, con índice único</td><td>Lo garantiza la base, no el código: ni un error ni dos guardados a la vez dejan dos SPO</td><td>Hoy no admite varios SPO por actividad. Es fácil de cambiar: se quita el índice y el resto queda igual</td></tr>
+          <tr><td>El id del insumo está solo en el record</td><td>El item guarda lo que escribió el usuario; no hay datos repetidos</td><td>Un item sin SPO no tiene insumo asociado</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </article>
+
+  <article class="block" data-block="supuestos">
+    <div class="head"><h3>Supuestos</h3></div>
+    <div class="body">
+      <p>Lo que el enunciado no define y tomé como dado:</p>
+      <ul>
+        <li>El inventario tiene, por cada insumo, un id, un nombre y una unidad.</li>
+        <li>Al cargar una actividad, cada producto elegido del inventario genera un record en su SPO. El apéndice lo muestra para la pulverización.</li>
+        <li>Una actividad tiene un solo SPO.</li>
+        <li>El id de cada item se genera automáticamente.</li>
+        <li>«Mismo nombre» es igualdad exacta.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="block" data-block="puntos">
+    <div class="head"><h3>Puntos a tener en cuenta</h3></div>
+    <div class="body">
+      <ul>
+        <li><strong>El lote.</strong> Lo único que podría pedir más de un SPO por actividad es el lote: el SPO tiene un solo lote y la actividad hasta 5. Pero ese campo es opcional y el enunciado no pide separar el consumo por lote.</li>
+        <li><strong>Otros caminos de escritura.</strong> La tabla es correcta mientras todo SPO se guarde por el mismo camino.</li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<!-- EXTRAS -->
+<section class="sec extras">
+  <span class="tag">Extras · fuera de lo pedido</span>
+  <h2>Posibles mejoras</h2>
+  <p>Nada de esto forma parte del entregable.</p>
+
+  <article class="block" data-block="x-sin-json">
+    <div class="head"><h3>Sin datos repetidos: tablas en lugar de JSON</h3></div>
+    <div class="body">
+      <p>En el challenge respeto los tipos que nos dieron: los items viven dentro del JSON de la actividad y los records dentro del JSON del SPO. Si pudiera organizar el almacenamiento a mi criterio, sacaría esas listas del JSON y las pasaría a tablas propias.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Tabla</th><th>Qué guarda</th><th>Reemplaza a</th></tr></thead>
+        <tbody>
+          <tr><td>activity_item</td><td>Un item: su actividad, tipo, nombre y dosis</td><td>Las listas de items y la genética</td></tr>
+          <tr><td>supply_output_record</td><td>Un record: su SPO, insumo, cantidad y su item</td><td>La lista de records</td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li><strong>Qué se gana.</strong> Cada dato está en un solo lugar, sin copia que mantener. El link del record al item pasa a ser una clave foránea real.</li>
+        <li><strong>Qué cuesta.</strong> Cambia los cinco tipos del enunciado, hay que migrar lo ya cargado y cambia todo lo que hoy lee esas listas.</li>
+        <li><strong>Por qué no lo hago acá.</strong> El enunciado da esos tipos como base. Lo que entrego es el paso previo: los ids y las referencias ya son los que usarían esas tablas.</li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="block" data-block="x-historico">
+    <div class="head"><h3>Linkear lo ya cargado</h3></div>
+    <div class="body">
+      <p>Una migración única que recorre los SPO existentes y los asocia con la regla por nombre.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="x-sugerir">
+    <div class="head"><h3>Sugerir insumos parecidos</h3></div>
+    <div class="body">
+      <p>Si el usuario escribe «Urea 3», mostrarle los insumos del inventario con nombre más cercano para que elija uno.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="x-crear">
+    <div class="head"><h3>Crear el insumo si no existe</h3></div>
+    <div class="body">
+      <p>Si el producto no está en el inventario, ofrecer crearlo en el momento.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="x-costo">
+    <div class="head"><h3>Costo por actividad</h3></div>
+    <div class="body">
+      <p>La cantidad de cada record por el costo unitario del insumo.</p>
+    </div>
+  </article>
+
+  <article class="block" data-block="x-stock">
+    <div class="head"><h3>Stock</h3></div>
+    <div class="body">
+      <p>Cada SPO descuenta stock. El challenge no pide manejarlo.</p>
+    </div>
+  </article>
+</section>
+
+</div>
+</body>
+</html>
